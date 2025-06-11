@@ -1,0 +1,156 @@
+"""
+Напечатать в порядке возрастания первых n натуральных чисел, в разложение
+которых на простые множители входят только числа 2,3,5.
+Идея решения: введем три очереди x2, x3, x5 в которых будем хранить
+элементы, которые соответственно в 2, 3, 5 раз больше напечатанных, но еще
+не напечатаны. Рассмотрим наименьший из ненапечатанных элементов: пусть
+это x. Тогда он делится нацело на одно из чисел 2, 3, 5; x находится в одной из
+очередей и является в ней первым элементом (меньшие его уже напечатаны,
+а элементы очередей не напечатаны). Напечатав x, нужно изъять его из
+очереди и добавить в очередь кратные ему элементы. Длины очередей не
+превосходят числа напечатанных элементов. Изначально в очередях хранится
+по одному числу.
+"""
+
+
+class Exp(Exception):
+    pass  # Исключение для пустой очереди
+
+
+class QueueNode:
+    def __init__(self, value):
+        self.value = value
+        self.next = None
+
+
+class Queue:
+    def __init__(self):
+        self.head = None
+        self.tail = None
+
+    def enqueue(self, value):
+        new_node = QueueNode(value)  # Создаем новый узел
+        if self.tail:
+            self.tail.next = new_node  # Связываем текущий хвост с новым узлом
+            self.tail = new_node  # Перемещаем хвост в конец
+        else:
+            self.head = self.tail = new_node  # Если очередь была пустая
+
+    def dequeue(self):
+        if not self.head:
+            raise Exp("Очередь пуста")
+        value = self.head.value  # Берем значение из головы очереди
+        self.head = self.head.next  # Сдвигаем голову на следующий элемент
+        if not self.head:
+            self.tail = None  # Если очередь опустела — сбрасываем хвост
+        return value
+
+    def peek(self):
+        if not self.head:
+            raise Exp("Очередь пуста")
+        return self.head.value  # Возвращаем значение головы без удаления
+
+    def is_empty(self):
+        return self.head is None
+
+
+class Hamming:
+    def __init__(self):
+        self.x2 = Queue()  # Очередь для чисел, кратных 2
+        self.x3 = Queue()  # Кратных 3
+        self.x5 = Queue()  # Кратных 5
+        self.generated = set()  # Множество для контроля уникальных чисел
+
+    def generate(self, n):
+        if not isinstance(n, int) or n <= 0:
+            raise ValueError("Число n должно быть натуральным числом")
+
+        self.x2.enqueue(2)
+        self.x3.enqueue(3)
+        self.x5.enqueue(5)
+        self.generated.update({2, 3, 5})  # Добавляем в множество для проверки уникальности
+
+        result = [1]  # Первое число в последовательности
+
+        while len(result) < n:
+            try:
+                candidates = []
+                if not self.x2.is_empty():
+                    candidates.append(self.x2.peek())  # Берём первый элемент из x2
+                if not self.x3.is_empty():
+                    candidates.append(self.x3.peek())  # Из x3
+                if not self.x5.is_empty():
+                    candidates.append(self.x5.peek())  # Из x5
+
+                x = min(candidates)  # Выбираем минимальный кандидат
+
+                result.append(x)  # Добавляем в результат
+
+                # Удаляем x из соответствующих очередей, если он там есть
+                if not self.x2.is_empty() and self.x2.peek() == x:
+                    self.x2.dequeue()
+                if not self.x3.is_empty() and self.x3.peek() == x:
+                    self.x3.dequeue()
+                if not self.x5.is_empty() and self.x5.peek() == x:
+                    self.x5.dequeue()
+
+                # Добавляем новые числа, умножая x на 2, 3 и 5, если они ещё не были добавлены
+                for multiplier, queue in [(2, self.x2), (3, self.x3), (5, self.x5)]:
+                    new_val = x * multiplier
+                    if new_val not in self.generated:
+                        queue.enqueue(new_val)
+                        self.generated.add(new_val)
+
+            except Exp as e:
+                print("Ошибка в работе очереди:", e)
+                break
+
+        return result
+
+
+def main():
+    print("Генератор чисел, разлагающихся на множители 2,3,5 (числа Хамминга).")
+    while True:
+        try:
+            n = int(input("Введите количество чисел для генерации (натуральное число): "))
+            generator = Hamming()
+            numbers = generator.generate(n)
+            print("Последовательность:")
+            print(*numbers)
+            break
+        except ValueError as ve:
+            print("Ошибка ввода:", ve)
+        except Exception as e:
+            print("Произошла ошибка:", e)
+
+
+if __name__ == "__main__":
+    main()
+
+
+'''
+Генератор чисел, разлагающихся на множители 2,3,5 (числа Хамминга).
+Введите количество чисел для генерации (натуральное число): 15
+Последовательность:
+1 2 3 4 5 6 8 9 10 12 15 16 18 20 24
+'''
+
+
+'''
+Генератор чисел, разлагающихся на множители 2,3,5 (числа Хамминга).
+Введите количество чисел для генерации (натуральное число): -12
+Ошибка ввода: Число n должно быть натуральным числом
+Введите количество чисел для генерации (натуральное число): 10
+Последовательность:
+1 2 3 4 5 6 8 9 10 12
+'''
+
+
+'''
+Генератор чисел, разлагающихся на множители 2,3,5 (числа Хамминга).
+Введите количество чисел для генерации (натуральное число): aa
+Ошибка ввода: invalid literal for int() with base 10: 'aa'
+Введите количество чисел для генерации (натуральное число): 4
+Последовательность:
+1 2 3 4
+'''
